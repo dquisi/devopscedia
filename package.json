@@ -1,0 +1,23 @@
+{
+  "name": "devops-web-app",
+  "version": "1.0.0",
+  "description": "Proyecto web mínimo para práctica DevOps",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-coverage",
+    "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --no-coverage --ci --coverage --coverageReporters=text"
+  },
+  "keywords": [
+    "devops",
+    "web",
+    "api",
+    "jest"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^30.3.0",
+    "jest": "^29.7.0"
+  }
+}

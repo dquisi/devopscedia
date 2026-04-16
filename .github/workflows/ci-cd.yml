@@ -1,0 +1,151 @@
+name: CI/CD Pipeline
+
+# Disparadores: ejecutar en push y pull_request en develop y main
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - develop
+      - main
+
+# Variables de entorno globales
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ========================================
+  # JOB 1: TEST - Ejecutar pruebas unitarias
+  # ========================================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout del código del repositorio
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configurar Node.js versión 20
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      # Instalar dependencias
+      - name: Install dependencies
+        run: npm install
+
+      # Ejecutar tests con coverage para CI
+      - name: Run tests (CI mode)
+        run: npm run test:ci
+
+  # ========================================
+  # JOB 2: VALIDATION - Verificar estructura
+  # ========================================
+  validation:
+    name: Validate Project Structure
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout del código del repositorio
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Validar que existan todos los archivos requeridos
+      - name: Verify required files exist
+        run: |
+          echo "🔍 Validando estructura del proyecto..."
+          
+          files=(
+            "index.html"
+            "app.js"
+            "src/api.js"
+            "src/validator.js"
+            "package.json"
+          )
+          
+          missing_files=()
+          
+          for file in "${files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✅ Encontrado: $file"
+            else
+              echo "❌ Falta: $file"
+              missing_files+=("$file")
+            fi
+          done
+          
+          if [ ${#missing_files[@]} -gt 0 ]; then
+            echo ""
+            echo "❌ ERROR: Faltan archivos requeridos:"
+            printf '%s\n' "${missing_files[@]}"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ Validación completada: Todos los archivos están presentes"
+
+      # Validar que package.json sea válido JSON
+      - name: Validate package.json syntax
+        run: |
+          echo "🔍 Validando sintaxis de package.json..."
+          node -e "require('./package.json')" && echo "✅ package.json es válido"
+
+      # Validar que index.html sea válido HTML básico
+      - name: Validate index.html structure
+        run: |
+          echo "🔍 Validando estructura de index.html..."
+          if grep -q "<!DOCTYPE html>" index.html; then
+            echo "✅ DOCTYPE declarado"
+          fi
+          if grep -q "<body>" index.html; then
+            echo "✅ Body tag presente"
+          fi
+          if grep -q 'app.js' index.html; then
+            echo "✅ app.js referenciado"
+          fi
+
+  # ========================================
+  # JOB 3: DEPLOY - Publicar en GitHub Pages
+  # ========================================
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [test, validation]
+    
+    # Ejecutar solo en rama main
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    # Configurar GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      # Checkout del código del repositorio
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configurar GitHub Pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      # Subir artefactos a GitHub Pages
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      # Desplegar a GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
