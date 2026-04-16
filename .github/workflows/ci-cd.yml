@@ -125,11 +125,6 @@ jobs:
       pages: write
       id-token: write
     
-    # Configurar GitHub Pages
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
       # Checkout del código del repositorio
       - name: Checkout code
